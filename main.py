@@ -6,6 +6,7 @@ from mss import mss
 from PyQt5 import QtWidgets, QtCore, QtGui
 import numpy as np
 from PIL import Image
+import os
 
 # --- Selection overlay (like Flameshot) using PyQt5 ---
 class RectSelector(QtWidgets.QWidget):
@@ -185,6 +186,7 @@ def main():
     stitched_image = current_image
     save_np_image(stitched_image, "stitched.png")
     iteration = 1
+    temp_files = ["capture1.png"]
 
     # 4. Continue scrolling and capturing until no new content
     while True:
@@ -198,12 +200,18 @@ def main():
         
         # 5. Capture screenshot
         print(f"Step {5 + iteration}: Taking screenshot...")
-        new_image = capture_region(region, f"capture{iteration + 1}.png")
-        print(f"Screenshot {iteration + 1} taken (capture{iteration + 1}.png)")
+        filename = f"capture{iteration + 1}.png"
+        new_image = capture_region(region, filename)
+        temp_files.append(filename)
+        print(f"Screenshot {iteration + 1} taken ({filename})")
         
         # 6. Check if new content was captured
         if images_are_similar(current_image, new_image):
             print("No new content detected. Stopping capture.")
+            # Remove the last capture file since it's not needed
+            if os.path.exists(filename):
+                os.remove(filename)
+                print(f"Removed temporary file: {filename}")
             break
             
         # 7. Stitch images (remove overlap)
@@ -224,7 +232,14 @@ def main():
             print("Maximum iterations reached. Stopping capture.")
             break
 
-    print("Process completed successfully!")
+    # Clean up temporary files
+    print("Cleaning up temporary files...")
+    for temp_file in temp_files:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+            print(f"Removed temporary file: {temp_file}")
+    
+    print("Process completed successfully! Final stitched image saved as stitched.png")
 
 
 if __name__ == "__main__":
