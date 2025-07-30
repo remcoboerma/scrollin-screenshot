@@ -1,0 +1,5 @@
+pyautogui
+mss
+pillow
+pyqt5
+numpy
