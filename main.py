@@ -50,12 +50,14 @@ import tkinter as tk
 from tkinter import ttk
 
 def list_windows():
+    print("Listing available windows...")
     out = subprocess.check_output(['wmctrl', '-l']).decode()
     windows = []
     for line in out.splitlines():
         parts = line.split(None, 3)
         if len(parts) == 4:
             windows.append({'id': parts[0], 'title': parts[3]})
+    print(f"Found {len(windows)} windows")
     return windows
 
 def select_window():
@@ -87,6 +89,7 @@ def select_window():
 
 def focus_window(win_id):
     # Use wmctrl to focus, waits a short moment after
+    print(f"Focusing window with ID: {win_id}")
     subprocess.run(['wmctrl', '-ia', win_id])
     time.sleep(0.5)
 
@@ -127,47 +130,67 @@ def save_np_image(arr, filename):
     img.save(filename)
 
 def main():
+    print("Starting main function...")
     # 1. Select window
+    print("Step 1: Selecting window...")
     win = select_window()
     if not win:
-        print("No window selected.")
+        print("ERROR: No window selected.")
         sys.exit(1)
     win_id = win['id']
+    print(f"Selected window: {win['title']} (ID: {win_id})")
 
     # 2. Select rectangle
+    print("Step 2: Starting region selection...")
     app = QtWidgets.QApplication(sys.argv)
+    print("Created QApplication")
     selector = RectSelector()
+    print("Created RectSelector widget")
     # shared state for communication between PyQt and main
     rect = {}
     def on_rect_selected(x, y, w, h):
+        print(f"Rectangle selected: x={x}, y={y}, w={w}, h={h}")
         rect['region'] = (x, y, w, h)
         app.quit()
     selector.rect_selected.connect(on_rect_selected)
+    print("Starting region selection interface...")
     app.exec_()
     region = rect['region']
     print(f"Selected region: {region}")
 
     # 3. Focus window and capture first screenshot
+    print("Step 3: Focusing window and taking first screenshot...")
     focus_window(win_id)
+    print("Window focused")
     time.sleep(0.2)  # Give some settle time
+    print("Taking first screenshot...")
     img1 = capture_region(region, "capture1.png")
     print("First screenshot taken (capture1.png)")
 
     # 4. Send pagedown
+    print("Step 4: Sending PageDown key...")
     focus_window(win_id)
+    print("Window re-focused")
     time.sleep(0.1)
     pyautogui.press('pagedown')
     print("PageDown pressed.")
     time.sleep(0.5)
+    print("Waiting for scroll to complete...")
 
     # 5. Capture second screenshot
+    print("Step 5: Taking second screenshot...")
     img2 = capture_region(region, "capture2.png")
     print("Second screenshot taken (capture2.png)")
 
     # 6. Stitch images (remove overlap)
+    print("Step 6: Stitching images...")
+    print(f"Image 1 shape: {img1.shape}")
+    print(f"Image 2 shape: {img2.shape}")
     stitched = find_overlap_and_stitch(img1, img2)
+    print(f"Stitched image shape: {stitched.shape}")
     save_np_image(stitched, "stitched.png")
     print("Stitched image saved as stitched.png.")
+    print("Process completed successfully!")
 
 
 if __name__ == "__main__":
