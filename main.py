@@ -125,6 +125,18 @@ def find_overlap_and_stitch(im1, im2):
     stitched = np.vstack([im1, im2[best_offset:]])
     return stitched
 
+def images_are_similar(img1, img2, threshold=5):
+    """
+    Compare two images to see if they're similar (indicating no new content)
+    Returns True if images are similar, False otherwise
+    """
+    if img1.shape != img2.shape:
+        return False
+        
+    diff = np.sum(np.abs(img1.astype(int) - img2.astype(int)))
+    normalized_diff = diff / (img1.shape[0] * img1.shape[1] * img1.shape[2])
+    return normalized_diff < threshold
+
 def save_np_image(arr, filename):
     img = Image.fromarray(arr.astype('uint8'))
     img.save(filename)
@@ -166,32 +178,52 @@ def main():
     print("Window focused")
     time.sleep(0.2)  # Give some settle time
     print("Taking first screenshot...")
-    img1 = capture_region(region, "capture1.png")
+    current_image = capture_region(region, "capture1.png")
     print("First screenshot taken (capture1.png)")
+    
+    # Initialize stitched image with the first capture
+    stitched_image = current_image
+    save_np_image(stitched_image, "stitched.png")
+    iteration = 1
 
-    # 4. Send pagedown
-    print("Step 4: Sending PageDown key...")
-    focus_window(win_id)
-    print("Window re-focused")
-    time.sleep(0.1)
-    pyautogui.press('pagedown')
-    print("PageDown pressed.")
-    time.sleep(0.5)
-    print("Waiting for scroll to complete...")
+    # 4. Continue scrolling and capturing until no new content
+    while True:
+        print(f"Step {4 + iteration}: Sending PageDown key...")
+        focus_window(win_id)
+        print("Window re-focused")
+        time.sleep(0.1)
+        pyautogui.press('pagedown')
+        print("PageDown pressed.")
+        time.sleep(0.5)  # Wait for scroll to complete
+        
+        # 5. Capture screenshot
+        print(f"Step {5 + iteration}: Taking screenshot...")
+        new_image = capture_region(region, f"capture{iteration + 1}.png")
+        print(f"Screenshot {iteration + 1} taken (capture{iteration + 1}.png)")
+        
+        # 6. Check if new content was captured
+        if images_are_similar(current_image, new_image):
+            print("No new content detected. Stopping capture.")
+            break
+            
+        # 7. Stitch images (remove overlap)
+        print(f"Step {6 + iteration}: Stitching new content...")
+        print(f"Current stitched image shape: {stitched_image.shape}")
+        print(f"New image shape: {new_image.shape}")
+        stitched_image = find_overlap_and_stitch(stitched_image, new_image)
+        print(f"Updated stitched image shape: {stitched_image.shape}")
+        save_np_image(stitched_image, "stitched.png")
+        print("Stitched image updated.")
+        
+        # Update current image for next comparison
+        current_image = new_image
+        iteration += 1
+        
+        # Safety check to prevent infinite loops
+        if iteration > 50:
+            print("Maximum iterations reached. Stopping capture.")
+            break
 
-    # 5. Capture second screenshot
-    print("Step 5: Taking second screenshot...")
-    img2 = capture_region(region, "capture2.png")
-    print("Second screenshot taken (capture2.png)")
-
-    # 6. Stitch images (remove overlap)
-    print("Step 6: Stitching images...")
-    print(f"Image 1 shape: {img1.shape}")
-    print(f"Image 2 shape: {img2.shape}")
-    stitched = find_overlap_and_stitch(img1, img2)
-    print(f"Stitched image shape: {stitched.shape}")
-    save_np_image(stitched, "stitched.png")
-    print("Stitched image saved as stitched.png.")
     print("Process completed successfully!")
 
 
