@@ -142,6 +142,8 @@ def main():
 
     # 2. Select rectangle
     print("Step 2: Starting region selection...")
+    print("Please select the region you want to capture on the screen...")
+    time.sleep(1)  # Give user time to see the message
     app = QtWidgets.QApplication(sys.argv)
     print("Created QApplication")
     selector = RectSelector()
