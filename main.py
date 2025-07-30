@@ -1,27 +1,3 @@
-You got it! Here’s a **complete, documented Python script** that:
-
-- Presents a GUI dropdown listing all open windows (using `wmctrl`).
-- Lets you select a window.
-- Lets you select a rectangle region on the screen (interactive, à la Flameshot).
-- Automatically focuses that window, captures an initial screenshot of the selection.
-- Sends PageDown, captures the next screenshot.
-- Shows how to (optionally) auto-stitch the newly revealed region (see note in code).
-- Is written for **X11-based Linux** (Wayland support would require different tooling).
-
----
-
-### Prerequisites
-
-```sh
-sudo apt install wmctrl       # for window enumeration/switching
-pip install pyautogui mss pillow pyqt5
-```
-
----
-
-### The script
-
-```python
 import sys
 import subprocess
 import time
@@ -90,13 +66,22 @@ def select_window():
     var = tk.StringVar()
     label = tk.Label(win_root, text="Choose window to control:")
     label.pack()
-    combo = ttk.Combobox(win_root, textvariable=var, values=titles, width=70)
-    combo.pack()
+    combo = ttk.Combobox(win_root, textvariable=var, values=titles, width=70, state="readonly")
+    combo.pack(pady=10)
     selected = {'index': None}
+    
     def on_sel(event):
         selected['index'] = combo.current()
-        win_root.destroy()
-    combo.bind('>', on_sel)
+        
+    def on_start():
+        if selected['index'] is not None:
+            win_root.destroy()
+        else:
+            tk.Label(win_root, text="Please select a window", fg="red").pack()
+            
+    combo.bind('<<ComboboxSelected>>', on_sel)
+    start_btn = tk.Button(win_root, text="Start", command=on_start)
+    start_btn.pack(pady=10)
     win_root.mainloop()
     return wins[selected['index']] if selected['index'] is not None else None
 
@@ -185,3 +170,5 @@ def main():
     print("Stitched image saved as stitched.png.")
 
 
+if __name__ == "__main__":
+    main()
